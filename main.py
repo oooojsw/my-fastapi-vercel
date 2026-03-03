@@ -1,13 +1,35 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
 import asyncio
 import os
+import time
 
 app = FastAPI()
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+if os.path.exists(os.path.join(BASE_DIR, "static")):
+    app.mount("/static", StaticFiles(directory=os.path.join(BASE_DIR, "static")), name="static")
+
+
+@app.middleware("http")
+async def log_requests(request: Request, call_next):
+    start_time = time.time()
+    response = await call_next(request)
+    process_time = time.time() - start_time
+    print(f"[日志] {request.method} {request.url.path} - {response.status_code} - {process_time:.3f}s")
+    return response
 
 
 class ChatRequest(BaseModel):
