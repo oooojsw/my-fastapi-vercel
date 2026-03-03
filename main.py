@@ -1,8 +1,13 @@
 from fastapi import FastAPI
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 from pydantic import BaseModel
 import asyncio
+import os
 
 app = FastAPI()
+
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 
 class ChatRequest(BaseModel):
@@ -15,6 +20,11 @@ class CreateAgentRequest(BaseModel):
     agent_name: str
     personality: str
     power: int
+
+
+@app.get("/")
+async def root():
+    return FileResponse(os.path.join(BASE_DIR, "index.html"))
 
 
 @app.post("/chat")

@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Agent 控制台</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            min-height: 100vh;
+            padding: 20px;
+            color: #fff;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        h1 {
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 2em;
+            background: linear-gradient(90deg, #00d4ff, #7c3aed);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .card {
+            background: rgba(255,255,255,0.1);
+            border-radius: 16px;
+            padding: 24px;
+            margin-bottom: 20px;
+            backdrop-filter: blur(10px);
+        }
+        h2 {
+            margin-bottom: 16px;
+            color: #00d4ff;
+        }
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #aaa;
+        }
+        input, textarea, select {
+            width: 100%;
+            padding: 12px;
+            margin-bottom: 16px;
+            border: 1px solid rgba(255,255,255,0.2);
+            border-radius: 8px;
+            background: rgba(0,0,0,0.3);
+            color: #fff;
+            font-size: 14px;
+        }
+        input:focus, textarea:focus, select:focus {
+            outline: none;
+            border-color: #00d4ff;
+        }
+        button {
+            width: 100%;
+            padding: 14px;
+            border: none;
+            border-radius: 8px;
+            background: linear-gradient(90deg, #00d4ff, #7c3aed);
+            color: white;
+            font-size: 16px;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        button:hover {
+            transform: scale(1.02);
+        }
+        button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+        .result {
+            margin-top: 16px;
+            padding: 16px;
+            background: rgba(0,0,0,0.3);
+            border-radius: 8px;
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        .tab {
+            flex: 1;
+            padding: 12px;
+            text-align: center;
+            background: rgba(255,255,255,0.1);
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        .tab.active {
+            background: linear-gradient(90deg, #00d4ff, #7c3aed);
+        }
+        .tab-content {
+            display: none;
+        }
+        .tab-content.active {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🤖 AI Agent 控制台</h1>
+        
+        <div class="tabs">
+            <div class="tab active" onclick="switchTab('chat')">💬 对话</div>
+            <div class="tab" onclick="switchTab('create')">⚡ 创建Agent</div>
+            <div class="tab" onclick="switchTab('ask')">🧠 异步问答</div>
+        </div>
+        
+        <div id="chat" class="tab-content active">
+            <div class="card">
+                <h2>💬 智能对话</h2>
+                <label>你的名字</label>
+                <input type="text" id="chatName" placeholder="请输入名字">
+                <label>问题</label>
+                <textarea id="chatQuestion" rows="3" placeholder="请输入你想问的问题"></textarea>
+                <button onclick="sendChat()">发送消息</button>
+                <div class="result" id="chatResult"></div>
+            </div>
+        </div>
+        
+        <div id="create" class="tab-content">
+            <div class="card">
+                <h2>⚡ 创建新Agent</h2>
+                <label>Agent名称</label>
+                <input type="text" id="agentName" placeholder="例如：阿尔法">
+                <label>性格</label>
+                <select id="agentPersonality">
+                    <option value="冷静">冷静</option>
+                    <option value="热情">热情</option>
+                    <option value="幽默">幽默</option>
+                    <option value="严肃">严肃</option>
+                    <option value="温柔">温柔</option>
+                </select>
+                <label>战斗力 (1-100)</label>
+                <input type="number" id="agentPower" value="80" min="1" max="100">
+                <button onclick="createAgent()">创建Agent</button>
+                <div class="result" id="createResult"></div>
+            </div>
+        </div>
+        
+        <div id="ask" class="tab-content">
+            <div class="card">
+                <h2>🧠 异步AI问答</h2>
+                <label>问题 (多个问题用逗号分隔)</label>
+                <textarea id="askQuestion" rows="3" placeholder="问题1, 问题2, 问题3"></textarea>
+                <button onclick="askAI()">并发提问</button>
+                <div class="result" id="askResult"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = '';
+        
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+            document.querySelector(`.tab[onclick="switchTab('${tabId}')"]`).classList.add('active');
+            document.getElementById(tabId).classList.add('active');
+        }
+        
+        async function sendChat() {
+            const name = document.getElementById('chatName').value;
+            const question = document.getElementById('chatQuestion').value;
+            const resultDiv = document.getElementById('chatResult');
+            
+            if (!name || !question) {
+                resultDiv.textContent = '请填写名字和问题';
+                return;
+            }
+            
+            resultDiv.textContent = '发送中...';
+            try {
+                const res = await fetch(API_BASE + '/chat', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({name, question})
+                });
+                const data = await res.json();
+                resultDiv.textContent = JSON.stringify(data, null, 2);
+            } catch(e) {
+                resultDiv.textContent = '请求失败: ' + e.message;
+            }
+        }
+        
+        async function createAgent() {
+            const agentName = document.getElementById('agentName').value;
+            const personality = document.getElementById('agentPersonality').value;
+            const power = parseInt(document.getElementById('agentPower').value);
+            const resultDiv = document.getElementById('createResult');
+            
+            if (!agentName) {
+                resultDiv.textContent = '请输入Agent名称';
+                return;
+            }
+            
+            resultDiv.textContent = '创建中...';
+            try {
+                const res = await fetch(API_BASE + '/create_agent', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({agent_name: agentName, personality, power})
+                });
+                const data = await res.json();
+                resultDiv.textContent = JSON.stringify(data, null, 2);
+            } catch(e) {
+                resultDiv.textContent = '请求失败: ' + e.message;
+            }
+        }
+        
+        async function askAI() {
+            const questionStr = document.getElementById('askQuestion').value;
+            const resultDiv = document.getElementById('askResult');
+            
+            if (!questionStr) {
+                resultDiv.textContent = '请输入问题';
+                return;
+            }
+            
+            const questions = questionStr.split(',').map(q => q.trim()).filter(q => q);
+            resultDiv.textContent = 'AI思考中...(3秒)';
+            
+            try {
+                const res = await fetch(API_BASE + '/ask_ai_batch', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(questions)
+                });
+                const data = await res.json();
+                resultDiv.textContent = JSON.stringify(data, null, 2);
+            } catch(e) {
+                resultDiv.textContent = '请求失败: ' + e.message;
+            }
+        }
+    </script>
+</body>
+</html>
